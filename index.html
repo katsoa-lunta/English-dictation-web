@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>英语听写练习</title>
+  <script src='https://unpkg.com/tesseract.js@5.0.5/dist/tesseract.min.js'></script>
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-dark: #4338ca;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 8px;
+      font-size: 1.6rem;
+    }
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      margin-bottom: 24px;
+      font-size: 0.9rem;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+      margin-bottom: 16px;
+    }
+    .upload-area {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: var(--muted);
+    }
+    .upload-area:hover, .upload-area.dragover {
+      border-color: var(--primary);
+      background: #eef2ff;
+      color: var(--primary);
+    }
+    .upload-area input { display: none; }
+    .preview-img {
+      max-width: 100%;
+      max-height: 240px;
+      border-radius: 8px;
+      margin-top: 16px;
+      display: none;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-dark); }
+    .btn-success { background: var(--success); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-secondary { background: var(--border); color: var(--text); }
+    .btn-block { width: 100%; }
+    .word-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 16px 0;
+    }
+    .word-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: #eef2ff;
+      color: var(--primary-dark);
+      border-radius: 20px;
+      font-size: 0.95rem;
+    }
+    .word-tag button {
+      background: none;
+      border: none;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+      padding: 0;
+    }
+    textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 1rem;
+      resize: vertical;
+    }
+    .practice-word {
+      text-align: center;
+      font-size: 1.2rem;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+    .practice-input {
+      width: 100%;
+      padding: 16px;
+      font-size: 1.3rem;
+      text-align: center;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 16px;
+      text-transform: lowercase;
+    }
+    .feedback {
+      text-align: center;
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      font-weight: 500;
+      display: none;
+    }
+    .feedback.correct { background: #dcfce7; color: #166534; display: block; }
+    .feedback.wrong { background: #fee2e2; color: #991b1b; display: block; }
+    .progress {
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .progress-bar {
+      height: 100%;
+      background: var(--primary);
+      transition: width 0.3s;
+    }
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .controls .btn { flex: 1; min-width: 120px; }
+    .rate-slider {
+      width: 100%;
+      margin: 10px 0;
+    }
+    .result-ring {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      margin: 0 auto 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      background: conic-gradient(var(--success) 0deg, var(--success) var(--deg), var(--border) var(--deg));
+    }
+    .result-ring-inner {
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    .result-ring-inner .percent { font-size: 2rem; font-weight: bold; color: var(--text); }
+    .result-ring-inner .label { font-size: 0.85rem; color: var(--muted); }
+    .wrong-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .wrong-list li {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .hidden { display: none !important; }
+    .loading {
+      text-align: center;
+      color: var(--muted);
+      padding: 20px;
+    }
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .tip {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📚 英语听写练习</h1>
+    <p class="subtitle">上传单词图片 → 自动识别 → 听写打分</p>
+
+    <!-- 上传阶段 -->
+    <div id="stage-upload" class="card">
+      <div class="upload-area" id="uploadArea">
+        <div>📷 点击或拖拽上传单词图片</div>
+        <div class="tip">支持 JPG、PNG、WebP</div>
+        <input type="file" id="fileInput" accept="image/*">
+      </div>
+      <img id="previewImg" class="preview-img" alt="预览">
+      <div id="ocrLoading" class="loading hidden"><span class="spinner"></span>正在识别图片中的单词...</div>
+      
+      <div id="wordSection" class="hidden">
+        <h3>识别到的单词</h3>
+        <div id="wordList" class="word-list"></div>
+        <p class="tip">可以删除不需要的单词，或在下框中手动补充（用空格或换行分隔）：</p>
+        <textarea id="manualWords" placeholder="在此补充或修改单词..."></textarea>
+        <div style="margin-top: 16px; display: flex; gap: 10px;">
+          <button class="btn btn-secondary" onclick="app.reOcr()">🔄 重新识别</button>
+          <button class="btn btn-primary btn-block" onclick="app.startPractice()">开始听写 ✏️</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 练习阶段 -->
+    <div id="stage-practice" class="card hidden">
+      <div class="progress">
+        <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+      </div>
+      <div class="practice-word">第 <span id="currentIndex">1</span> / <span id="totalCount">0</span> 个</div>
+      
+      <div class="controls">
+        <button class="btn btn-primary" onclick="app.speakCurrent()">🔊 播放发音</button>
+        <button class="btn btn-secondary" onclick="app.speakCurrent(true)">🐢 慢速播放</button>
+      </div>
+      
+      <label style="font-size: 0.9rem; color: var(--muted);">语速：<span id="rateValue">1.0</span>x</label>
+      <input type="range" id="rateSlider" class="rate-slider" min="0.5" max="1.5" step="0.1" value="1">
+      
+      <input type="text" id="answerInput" class="practice-input" placeholder="输入听到的单词" autocomplete="off" autocapitalize="off">
+      <div id="feedback" class="feedback"></div>
+      
+      <div class="controls">
+        <button class="btn btn-secondary" onclick="app.skipWord()">跳过 ⏭</button>
+        <button class="btn btn-primary btn-block" onclick="app.submitAnswer()">提交 ✅</button>
+      </div>
+    </div>
+
+    <!-- 结果阶段 -->
+    <div id="stage-result" class="card hidden">
+      <h2 style="text-align: center; margin-top: 0;">练习结果</h2>
+      <div id="resultRing" class="result-ring">
+        <div class="result-ring-inner">
+          <span id="resultPercent" class="percent">0%</span>
+          <span class="label">正确率</span>
+        </div>
+      </div>
+      <p style="text-align: center; color: var(--muted);">
+        共 <span id="resultTotal">0</span> 词，
+        正确 <span id="resultCorrect">0</span>，
+        错误 <span id="resultWrong">0</span>
+      </p>
+      <div id="wrongSection">
+        <h3>错词列表</h3>
+        <ul id="wrongList" class="wrong-list"></ul>
+      </div>
+      <div style="margin-top: 24px; display: flex; gap: 10px; flex-direction: column;">
+        <button class="btn btn-primary btn-block" onclick="app.retryWrong()">🔄 重做错词</button>
+        <button class="btn btn-secondary btn-block" onclick="app.restart()">从头再来</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const app = {
+      words: [],
+      current: 0,
+      answers: [],
+      wrong: [],
+      synth: window.speechSynthesis,
+      ttsReady: false,
+
+      init() {
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const rateSlider = document.getElementById('rateSlider');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          uploadArea.classList.add('dragover');
+        });
+        uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+        uploadArea.addEventListener('drop', (e) => {
+          e.preventDefault();
+          uploadArea.classList.remove('dragover');
+          const file = e.dataTransfer.files[0];
+          if (file) this.handleFile(file);
+        });
+        fileInput.addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          if (file) this.handleFile(file);
+        });
+
+        rateSlider.addEventListener('input', (e) => {
+          document.getElementById('rateValue').textContent = parseFloat(e.target.value).toFixed(1);
+        });
+
+        document.getElementById('answerInput').addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') this.submitAnswer();
+        });
+
+        // 预加载 Tesseract 语言包
+        this.loadTesseract();
+      },
+
+      async loadTesseract() {
+        try {
+          this.worker = await Tesseract.createWorker('eng');
+        } catch (e) {
+          console.error('Tesseract 加载失败', e);
+        }
+      },
+
+      handleFile(file) {
+        if (!file.type.startsWith('image/')) {
+          alert('请选择图片文件');
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = document.getElementById('previewImg');
+          img.src = e.target.result;
+          img.style.display = 'block';
+          this.doOcr(e.target.result);
+        };
+        reader.readAsDataURL(file);
+      },
+
+      async doOcr(imageSrc) {
+        document.getElementById('ocrLoading').classList.remove('hidden');
+        document.getElementById('wordSection').classList.add('hidden');
+        
+        try {
+          if (!this.worker) {
+            this.worker = await Tesseract.createWorker('eng');
+          }
+          const { data: { words } } = await this.worker.recognize(imageSrc);
+          // 过滤：只保留英文单词，长度 2-20，去重
+          const rawWords = words
+            .map(w => w.text.trim())
+            .filter(w => /^[a-zA-Z]{2,20}$/.test(w))
+            .map(w => w.toLowerCase());
+          this.words = [...new Set(rawWords)];
+          this.renderWords();
+          document.getElementById('wordSection').classList.remove('hidden');
+        } catch (e) {
+          console.error(e);
+          alert('识别失败，请手动输入单词');
+          this.words = [];
+          document.getElementById('wordSection').classList.remove('hidden');
+        } finally {
+          document.getElementById('ocrLoading').classList.add('hidden');
+        }
+      },
+
+      reOcr() {
+        document.getElementById('fileInput').click();
+      },
+
+      renderWords() {
+        const list = document.getElementById('wordList');
+        list.innerHTML = this.words.map((w, i) => `
+          <span class="word-tag">
+            ${w}
+            <button onclick="app.removeWord(${i})" title="删除">×</button>
+          </span>
+        `).join('');
+        document.getElementById('manualWords').value = this.words.join('\n');
+      },
+
+      removeWord(index) {
+        this.words.splice(index, 1);
+        this.renderWords();
+      },
+
+      collectWords() {
+        const manual = document.getElementById('manualWords').value;
+        const merged = [
+          ...this.words,
+          ...manual.split(/[\s,，]+/).map(w => w.trim().toLowerCase()).filter(w => /^[a-z]{2,20}$/.test(w))
+        ];
+        return [...new Set(merged)];
+      },
+
+      startPractice() {
+        this.words = this.collectWords();
+        if (this.words.length === 0) {
+          alert('请至少输入一个单词');
+          return;
+        }
+        this.current = 0;
+        this.answers = [];
+        this.wrong = [];
+        this.showStage('stage-practice');
+        this.updateProgress();
+        document.getElementById('totalCount').textContent = this.words.length;
+        this.speakCurrent();
+        document.getElementById('answerInput').focus();
+      },
+
+      speakCurrent(slow = false) {
+        if (!this.synth) {
+          alert('当前浏览器不支持语音合成');
+          return;
+        }
+        this.synth.cancel();
+        const word = this.words[this.current];
+        const utter = new SpeechSynthesisUtterance(word);
+        utter.lang = 'en-US';
+        const rate = parseFloat(document.getElementById('rateSlider').value);
+        utter.rate = slow ? Math.max(0.5, rate * 0.7) : rate;
+        this.synth.speak(utter);
+      },
+
+      submitAnswer() {
+        const input = document.getElementById('answerInput');
+        const answer = input.value.trim().toLowerCase();
+        if (!answer) return;
+        
+        const correct = this.words[this.current];
+        const isRight = answer === correct;
+        const feedback = document.getElementById('feedback');
+        
+        this.answers.push({ word: correct, answer, isRight });
+        if (!isRight) this.wrong.push({ word: correct, answer });
+        
+        feedback.className = 'feedback ' + (isRight ? 'correct' : 'wrong');
+        feedback.textContent = isRight ? '✅ 正确！' : `❌ 错误，正确答案是：${correct}`;
+        feedback.style.display = 'block';
+        
+        input.disabled = true;
+        
+        setTimeout(() => {
+          input.disabled = false;
+          input.value = '';
+          feedback.style.display = 'none';
+          this.current++;
+          if (this.current >= this.words.length) {
+            this.showResult();
+          } else {
+            this.updateProgress();
+            this.speakCurrent();
+            input.focus();
+          }
+        }, 1500);
+      },
+
+      skipWord() {
+        const correct = this.words[this.current];
+        this.answers.push({ word: correct, answer: '', isRight: false });
+        this.wrong.push({ word: correct, answer: '' });
+        document.getElementById('answerInput').value = '';
+        this.current++;
+        if (this.current >= this.words.length) {
+          this.showResult();
+        } else {
+          this.updateProgress();
+          this.speakCurrent();
+          document.getElementById('answerInput').focus();
+        }
+      },
+
+      updateProgress() {
+        document.getElementById('currentIndex').textContent = this.current + 1;
+        const pct = (this.current / this.words.length) * 100;
+        document.getElementById('progressBar').style.width = pct + '%';
+      },
+
+      showResult() {
+        this.showStage('stage-result');
+        const total = this.words.length;
+        const correct = this.answers.filter(a => a.isRight).length;
+        const wrong = total - correct;
+        const percent = total === 0 ? 0 : Math.round((correct / total) * 100);
+        
+        document.getElementById('resultTotal').textContent = total;
+        document.getElementById('resultCorrect').textContent = correct;
+        document.getElementById('resultWrong').textContent = wrong;
+        document.getElementById('resultPercent').textContent = percent + '%';
+        document.getElementById('resultRing').style.setProperty('--deg', (percent / 100 * 360) + 'deg');
+        
+        const wrongList = document.getElementById('wrongList');
+        if (this.wrong.length === 0) {
+          document.getElementById('wrongSection').innerHTML = '<p style="text-align:center;color:var(--success);font-weight:500;">🎉 全对！太棒了！</p>';
+        } else {
+          wrongList.innerHTML = this.wrong.map(w => `
+            <li>
+              <span style="color:var(--danger);font-weight:500;">${w.word}</span>
+              <span style="color:var(--muted);">你的答案：${w.answer || '（未答）'}</span>
+            </li>
+          `).join('');
+        }
+      },
+
+      retryWrong() {
+        if (this.wrong.length === 0) {
+          alert('没有错词，重新练习全部单词');
+          this.restart();
+          return;
+        }
+        this.words = this.wrong.map(w => w.word);
+        this.current = 0;
+        this.answers = [];
+        this.wrong = [];
+        this.showStage('stage-practice');
+        this.updateProgress();
+        document.getElementById('totalCount').textContent = this.words.length;
+        this.speakCurrent();
+      },
+
+      restart() {
+        this.words = [];
+        this.current = 0;
+        this.answers = [];
+        this.wrong = [];
+        document.getElementById('previewImg').style.display = 'none';
+        document.getElementById('previewImg').src = '';
+        document.getElementById('wordSection').classList.add('hidden');
+        document.getElementById('manualWords').value = '';
+        document.getElementById('fileInput').value = '';
+        document.getElementById('wrongSection').innerHTML = '<h3>错词列表</h3><ul id="wrongList" class="wrong-list"></ul>';
+        this.showStage('stage-upload');
+      },
+
+      showStage(id) {
+        ['stage-upload', 'stage-practice', 'stage-result'].forEach(s => {
+          document.getElementById(s).classList.toggle('hidden', s !== id);
+        });
+      }
+    };
+
+    app.init();
+  </script>
+</body>
+</html>
