@@ -1,16 +1,12 @@
----
-📚 英语听写练习
----
+# 📚 英语听写练习
 
 一款适合学生使用的纯网页英语单词听写工具。无需安装、无需后端，打开网页即可练习。
 
 > 拍一拍，听一听，写一写 —— 英语听写如此简单。
 
----
-
 ## ✨ 在线体验
 
-🔗 **<https://katsoa-lunta.github.io/english-dictation>**
+🔗 **<https://katsoa-lunta.github.io/English-dictation-web>**
 
 ---
 
@@ -44,31 +40,7 @@
 - **Web Speech API** —— 浏览器语音合成（TTS）
 - **GitHub Pages** —— 免费静态站点托管
 
----
-
-## 📦 部署到 GitHub Pages
-
-### 方式一：直接上传（最简单）
-
-1. 在 GitHub 新建一个 Public 仓库，例如 `english-dictation`
-2. 进入仓库，点击 **Add file → Upload files**
-3. 上传 `index.html`
-4. 打开 **Settings → Pages**
-5. Source 选择 **Deploy from a branch**，Branch 选 **main / (root)**
-6. 等待 1-2 分钟，访问 `https://你的用户名.github.io/english-dictation`
-
-### 方式二：使用 Git
-
-```bash
-git clone https://github.com/你的用户名/english-dictation.git
-cd english-dictation
-# 将 index.html 放入此目录
-git add index.html
-git commit -m "Initial commit"
-git push origin main
-```
-
-然后在仓库 Settings → Pages 中启用 GitHub Pages。
+> 💡 **本地运行 / 二次开发**：本项目为纯前端单文件应用，直接下载 `index.html` 并用浏览器打开即可运行。无需安装任何环境或依赖，完全开源。
 
 ---
 
@@ -96,10 +68,7 @@ A：首次加载语言包后，部分浏览器支持离线缓存。但为获得�
 
 ## 📄 许可证
 
-MIT License — 可自由使用、修改和分发。
+[MIT License](https://opensource.org/licenses/MIT) — 可自由使用、修改和分发。
 
 ---
-
 如果觉得这个项目对你有帮助，欢迎点个 ⭐ Star！
-
----
